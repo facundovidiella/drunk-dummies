@@ -7,7 +7,6 @@
 # Types of changes
 
 <!-- What type of change your code introduce? mark the boxes -->
-
 - [ ] Bug fix
 - [ ] Enhancement
 - [ ] New Feature

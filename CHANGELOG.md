@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog] (https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+- Add running action and animation
+
 ## [0.0.1]
 
 - Scene and prefab model

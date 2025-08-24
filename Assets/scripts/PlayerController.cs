@@ -28,6 +28,13 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         mainCam = Camera.main;
+
+        var playerInput = GetComponent<PlayerInput>();
+        var sprintAction = playerInput.actions["Sprint"];
+
+        sprintAction.started += ctx => { isSprinting = true;};
+        sprintAction.canceled += ctx => { isSprinting = false;};
+
     }
 
     // ---------------- INPUT SYSTEM ----------------
@@ -47,6 +54,7 @@ public class PlayerController : MonoBehaviour
         if (value.isPressed && isGrounded)
         {
             isJumping = true;
+            isSprinting = false;
         }
     }
 
@@ -62,6 +70,7 @@ public class PlayerController : MonoBehaviour
     {
         animator.SetBool("isWalking", isWalking);
         animator.SetBool("isJumping", !isGrounded);
+        animator.SetBool("isSprinting", isSprinting);
     }
 
     // ---------------- PHYSICS ----------------
