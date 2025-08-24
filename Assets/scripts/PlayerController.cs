@@ -2,37 +2,109 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody))]
-public class PlayerMovement : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
-    public float speed = 5f;
+    [Header("Movement")]
+    public float walkSpeed = 4f;
+    public float sprintSpeed = 7f;
+    public float rotationSpeed = 10f;
+
+    [Header("Jumping")]
+    public float jumpForce = 6f;
+    public LayerMask groundMask; // suelo
+
+    [Header("Animator")]
+    public Animator animator;
+
     private Rigidbody rb;
     private Vector2 moveInput;
+    private bool isWalking;
+    private bool isSprinting;
+    private bool isJumping;
+    private bool isGrounded;
+    private Camera mainCam;
 
-    void Start()
+    void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true;
+        mainCam = Camera.main;
     }
 
+    // ---------------- INPUT SYSTEM ----------------
+    public void OnMove(InputValue value)
+    {
+        moveInput = value.Get<Vector2>();
+        isWalking = moveInput.magnitude > 0.1f;
+    }
+
+    public void OnSprint(InputValue value)
+    {
+        isSprinting = value.isPressed;
+    }
+
+    public void OnJump(InputValue value)
+    {
+        if (value.isPressed && isGrounded)
+        {
+            isJumping = true;
+        }
+    }
+
+    public void OnAttack(InputValue value)
+    {
+        if (value.isPressed)
+        {
+            animator.SetTrigger("attack");
+        }
+    }
+
+    void Update()
+    {
+        animator.SetBool("isWalking", isWalking);
+        animator.SetBool("isJumping", !isGrounded);
+    }
+
+    // ---------------- PHYSICS ----------------
     void FixedUpdate()
     {
-        Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
-        rb.linearVelocity = new Vector3(move.x * speed, rb.linearVelocity.y, move.z * speed);
-    }
+        GroundCheck();
 
-    // Para Unity Events, debe ser público
-    public void Move(InputAction.CallbackContext context)
-    {
-        moveInput = context.ReadValue<Vector2>();
-        Debug.Log("Move Input: " + moveInput);
-    }
+        // Direccion relativa a camara
+        Vector3 forward = mainCam.transform.forward;
+        forward.y = 0f;
+        forward.Normalize();
 
-    public void Jump(InputAction.CallbackContext context)
-    {
-        if (context.performed)
+        Vector3 right = mainCam.transform.right;
+        right.y = 0f;
+        right.Normalize();
+
+        Vector3 moveDir = (forward * moveInput.y + right * moveInput.x).normalized;
+
+        // Velocidad actual
+        float targetSpeed = isSprinting ? sprintSpeed : walkSpeed;
+
+        // Movimiento con Rigidbody
+        Vector3 targetPosition = rb.position + moveDir * targetSpeed * Time.fixedDeltaTime;
+        rb.MovePosition(targetPosition);
+
+        // Rotación suave hacia la dirección de movimiento
+        if (moveDir.sqrMagnitude > 0.01f)
         {
-            rb.AddForce(Vector3.up * 5f, ForceMode.Impulse);
-            Debug.Log("Jump!");
+            Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime));
         }
+
+        // Salto
+        if (isJumping)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            isJumping = false;
+        }
+    }
+
+    void GroundCheck()
+    {
+        Ray ray = new Ray(transform.position + Vector3.up * 0.1f, Vector3.down);
+        isGrounded = Physics.Raycast(ray, 0.3f, groundMask);
     }
 }
